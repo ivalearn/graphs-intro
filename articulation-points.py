@@ -1,66 +1,31 @@
-import sys
-from collections import defaultdict, deque
-
-def _my_nx_dfs(adj, components=True):
-    # depth-first search algorithm to generate articulation points and biconnected components
-    visited = set()
-    for start in sorted(adj.keys()):
-        if start in visited:
-            continue
-        discovery = {start:0} # "time" of first discovery of node during search
-        low = {start:0}
-        root_children = 0
-        visited.add(start)
-        edge_stack = []
-        stack = [(start, start, iter(adj[start]))]
-        while stack:
-            grandparent, parent, children = stack[-1]
-            try:
-                child = next(children)
-                if grandparent == child:
-                    continue
-                if child in visited:
-                    if discovery[child] <= discovery[parent]: # back edge
-                        low[parent] = min(low[parent],discovery[child])
-                        if components:
-                            edge_stack.append((parent,child))
-                else:
-                    low[child] = discovery[child] = len(discovery)
-                    visited.add(child)
-                    stack.append((parent, child, iter(adj[child])))
-                    if components:
-                        edge_stack.append((parent,child))
-            except StopIteration:
-                stack.pop()
-                if len(stack) > 1:
-                    if low[parent] >= discovery[grandparent]:
-                        if components:
-                            ind = edge_stack.index((grandparent,parent))
-                            yield edge_stack[ind:]
-                            edge_stack=edge_stack[:ind]
-                        else:
-                            yield grandparent
-                    low[grandparent] = min(low[parent], low[grandparent])
-                elif stack: # length 1 so grandparent is root
-                    root_children += 1
-                    if components:
-                        ind = edge_stack.index((grandparent,parent))
-                        yield edge_stack[ind:]
-        if not components:
-            # root node is articulation point if it has more than 1 child
-            if root_children > 1:
-                yield start
-
-def my_nx_articulation_points(edge_list):
-    adj = defaultdict(set)
-    for a,b in edge_list:
-        adj[a].add(b)
-        adj[b].add(a)
-    if not adj:
-        return []
-    return sorted(set(_my_nx_dfs(adj, components=False)))
-
-edge_list = list(tuple(map(int, s.split())) for s in sys.stdin)
-#edge_list = test_edges
-cuts = my_nx_articulation_points(edge_list)
-print(' '.join(str(v) for v in cuts))
+from sys import stdin
+from collections import defaultdict
+a = defaultdict(set)
+for p, v in (map(int, s.split()) for s in stdin):
+    a[p].add(v)
+    a[v].add(p)
+r = set()
+k = {0: 0}
+l = {0: 0}
+n = 0
+s = [(0, 0, iter(a[0]))]
+while s:
+    p, v, i = s[-1]
+    for c in i:
+        if c==p:  continue
+        if c in k:
+            if k[c] <= k[v]:
+                l[v] = min(l[v], k[c])
+        else:
+            if not v:  n+=1
+            l[c] = k[c] = len(k)
+            s.append((v, c, iter(a[c])))
+        break
+    else:
+        s.pop()
+        if len(s) > 1:
+            if l[v] >= k[p]:
+                r.add(p)
+            l[p] = min(l[v], l[p])
+if n > 1:  r.add(0)
+print(' '.join(str(s) for s in sorted(r)))
